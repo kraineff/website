@@ -1,0 +1,7 @@
+proxies:
+  - name: PROXY_NAME
+    type: ss
+    server: server
+    port: 443
+    cipher: AEAD_CHACHA20_POLY1305
+    password: 'password'
