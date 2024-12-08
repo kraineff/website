@@ -9,15 +9,15 @@ new Elysia()
 
         const fileContent = [
             "proxies:",
-            `\n  - name: ${proxy.tag}`,
+            `\n  - name: '${proxy.tag}'`,
             "\n    type: ss",
             `\n    server: ${proxy.server}`,
             `\n    port: ${proxy.server_port}`,
             `\n    cipher: ${proxy.method}`,
-            `\n    password: "${proxy.password}"`,
+            `\n    password: '${proxy.password}'`,
         ];
         const file = Bun.file("proxy.yaml");
-        await Bun.write(file, fileContent.join());
+        await Bun.write(file, fileContent.join(""));
         return file;
     })
     .listen(Bun.env.SERVER_PORT ?? 3000);
