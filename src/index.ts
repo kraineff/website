@@ -13,7 +13,7 @@ new Elysia()
             "\n    type: ss",
             `\n    server: ${proxy.server}`,
             `\n    port: ${proxy.server_port}`,
-            "\n    cipher: AEAD_CHACHA20_POLY1305",
+            `\n    cipher: ${proxy.method}`,
             `\n    password: "${proxy.password}"`,
         ];
         const file = Bun.file("proxy.yaml");
