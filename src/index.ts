@@ -6,6 +6,6 @@ new Elysia()
         if (!Bun.env.PROXY_URL || !Bun.env.PROXY_TOKEN || Bun.env.PROXY_TOKEN !== query.token) return "Нет токена";
         const request = await fetch(Bun.env.PROXY_URL + Bun.env.PROXY_TOKEN);
         const proxy = await request.json();
-        return `Shadowsocks,${proxy.server},${proxy.server_port},${proxy.method},"${proxy.password}"`;
+        return `${proxy.tag} = Shadowsocks,${proxy.server},${proxy.server_port},${proxy.method},"${proxy.password}"`;
     })
     .listen(Bun.env.SERVER_PORT ?? 3000);
