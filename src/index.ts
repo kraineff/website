@@ -12,6 +12,15 @@ new Elysia()
 
         if (query.app === "loon") return `${proxy.tag} = Shadowsocks,${proxy.server},${proxy.server_port},${proxy.method},"${proxy.password}"`;
         else if (query.app === "surge") return `[Proxy]\n${proxy.tag} = ss, ${proxy.server}, ${proxy.server_port}, encrypt-method=${proxy.method}, password=${proxy.password}, tfo=true, udp-relay=true`;
+        else if (query.app === "stash") return [
+            "proxies:",
+            `\n  - name: '${proxy.tag}'`,
+            "\n    type: ss",
+            `\n    server: ${proxy.server}`,
+            `\n    port: ${proxy.server_port}`,
+            `\n    cipher: ${proxy.method}`,
+            `\n    password: '${proxy.password}'`,
+        ].join("");
         else return "Неизвестное приложение"
     })
     .listen(Bun.env.SERVER_PORT ?? 3000);
