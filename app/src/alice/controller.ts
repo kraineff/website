@@ -87,12 +87,14 @@ export class AliceController {
         };
 
         await Promise.all(
-            Object.values(homeyDevices).map(async homeyDevice => {
-                const converterNames = Object.keys(homeyDevice.capabilitiesObj);
-                const converter = await this.homeyConverters.merge([...converterNames, homeyDevice.driverId]);
-                const device = await converter.getDevice(homeyDevice, homeyZones);
-                device && payload.devices.push(device);
-            })
+            Object.values(homeyDevices)
+                .filter(homeyDevice => !homeyDevice.driverId.includes(":com.yandex:"))
+                .map(async homeyDevice => {
+                    const converterNames = Object.keys(homeyDevice.capabilitiesObj);
+                    const converter = await this.homeyConverters.merge([...converterNames, homeyDevice.driverId]);
+                    const device = await converter.getDevice(homeyDevice, homeyZones);
+                    device && payload.devices.push(device);
+                })
         );
 
         return payload;
