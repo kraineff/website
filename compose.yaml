@@ -3,7 +3,7 @@ services:
     build: ./app
     container_name: app
     restart: always
-    env_file: "app.env"
+    env_file: "app/.env"
     networks:
       - app_network
     deploy:
