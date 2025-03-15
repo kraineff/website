@@ -1,22 +1,18 @@
-version: "3.9"
-
 services:
   app:
     build: ./app
     container_name: app
     restart: always
+    env_file: "app.env"
     networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - app_network
+    ports:
+      - "3000:3000"
     deploy:
       resources:
         limits:
           memory: 512M
-          cpus: '0.5'
+          cpus: "0.5"
   
   nginx:
     image: nginx:alpine
@@ -28,21 +24,15 @@ services:
     ports:
       - "443:443"
     networks:
-      - app-network
+      - app_network
     depends_on:
-      app:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "nginx", "-t"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      - app
     deploy:
       resources:
         limits:
           memory: 256M
-          cpus: '0.2'
+          cpus: "0.2"
 
 networks:
-  app-network:
+  app_network:
     driver: bridge
