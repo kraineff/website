@@ -7,11 +7,11 @@ type Category = "capabilities" | "properties";
 
 export class CapabilityConverter<Params extends Record<string, unknown>, SetValue> {
 	readonly category: Category;
-	#parameters: Params = {} as Params;
+	private parameters: Params = {} as Params;
 
-	#onParamsHandler?: ParamsHandler<Params>;
-	#onGetHandler?: (device: HomeyAPIV2.ManagerDevices.Device) => SetValue | undefined;
-	#onSetHandler?: (value: SetValue) => Record<string, unknown>;
+	private onParamsHandler?: ParamsHandler<Params>;
+	private onGetHandler?: (device: HomeyAPIV2.ManagerDevices.Device) => SetValue | undefined;
+	private onSetHandler?: (value: SetValue) => Record<string, unknown>;
 
 	constructor(
 		readonly name: string,
@@ -23,11 +23,11 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 
 	setParameters(values: Params & { parse?: ParamsHandler<Params> }) {
 		const { parse, ...parameters } = values;
-		this.#parameters = parameters as Params;
+		this.parameters = parameters as Params;
 
 		if (parse) {
-			const currentHandler = this.#onParamsHandler || (() => ({}));
-			this.#onParamsHandler = (capabilities) => ({
+			const currentHandler = this.onParamsHandler || (() => ({}));
+			this.onParamsHandler = (capabilities) => ({
 				...currentHandler(capabilities),
 				...parse(capabilities),
 			});
@@ -40,10 +40,10 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 		capabilityId: string,
 		handler?: (value: ValueType) => SetValue | "@prev" | "@break",
 	) {
-		const currentHandler = this.#onGetHandler || (() => undefined);
+		const currentHandler = this.onGetHandler || (() => undefined);
 		const newHandler = handler ?? ((value) => value as unknown as SetValue);
 
-		this.#onGetHandler = (device) => {
+		this.onGetHandler = (device) => {
 			try {
 				const capability = (device.capabilitiesObj as HomeyCapabilities)?.[capabilityId];
 				const value = currentHandler(device);
@@ -71,10 +71,10 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 		settingId: string,
 		handler?: (value: ValueType) => SetValue | "@prev" | "@break",
 	) {
-		const currentHandler = this.#onGetHandler || (() => undefined);
+		const currentHandler = this.onGetHandler || (() => undefined);
 		const newHandler = handler ?? ((value) => value as unknown as SetValue);
 
-		this.#onGetHandler = (device) => {
+		this.onGetHandler = (device) => {
 			try {
 				const setting = (device.settings as Record<string, any>)?.[settingId];
 				const value = currentHandler(device);
@@ -99,10 +99,10 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 		capabilityId: string,
 		handler?: (value: SetValue) => ValueType | "@break",
 	) {
-		const currentHandler = this.#onSetHandler ?? (() => ({}) as any);
+		const currentHandler = this.onSetHandler ?? (() => ({}) as any);
 		const newHandler = handler ?? ((value) => value as unknown as ValueType);
 
-		this.#onSetHandler = (setValue) => {
+		this.onSetHandler = (setValue) => {
 			try {
 				const values = currentHandler(setValue);
 				const newValue = newHandler(setValue);
@@ -121,8 +121,8 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 
 	async onGetParameters(capabilities: HomeyCapabilities) {
 		const parameters: Record<string, any> = {
-			...this.#parameters,
-			...this.#onParamsHandler?.(capabilities),
+			...this.parameters,
+			...this.onParamsHandler?.(capabilities),
 		};
 
 		return {
@@ -168,12 +168,12 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 	}
 
 	async onGetCapability(device: HomeyAPIV2.ManagerDevices.Device) {
-		const value = this.#onGetHandler ? this.#onGetHandler(device) : undefined;
+		const value = this.onGetHandler ? this.onGetHandler(device) : undefined;
 		return value !== undefined ? makeStateBody(this.type, this.instance, { value }) : value;
 	}
 
 	async onSetCapability(value: any, handler: (capabilityId: string, value: any) => Promise<any>) {
-		const values = Object.entries(this.#onSetHandler ? this.#onSetHandler(value) : {});
+		const values = Object.entries(this.onSetHandler ? this.onSetHandler(value) : {});
 		const actionResult = await Promise.all(
 			values.map(
 				async ([capabilityId, value]) => value !== undefined && handler(capabilityId, value),

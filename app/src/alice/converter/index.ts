@@ -7,11 +7,11 @@ type CapabilityBuilder<Params, SetValue> =
     (converter: CapabilityConverter<Params & { retrievable?: boolean }, SetValue>) => typeof converter;
 
 export class Converter {
-    #type?: string;
-    #converters = new Map<string, CapabilityConverter<any, any>>();
+    private type?: string;
+    private converters = new Map<string, CapabilityConverter<any, any>>();
 
     constructor(readonly name: string, type?: string) {
-        this.#type = type;
+        this.type = type;
     }
 
     static create(name: string, type?: string) {
@@ -19,8 +19,8 @@ export class Converter {
     }
 
     use(converter: Converter) {
-        const converters = new Map(this.#converters);
-        const convertersNew = new Map(converter.#converters);
+        const converters = new Map(this.converters);
+        const convertersNew = new Map(converter.converters);
 
         convertersNew.forEach((converter, key) => {
             const converterName = converters.get(key)?.name;
@@ -31,8 +31,8 @@ export class Converter {
             converters.set(key, converter);
         });
 
-        this.#type = converter.#type || this.#type;
-        this.#converters = converters;
+        this.type = converter.type || this.type;
+        this.converters = converters;
         (converter as any) = null;
         return this;
     }
@@ -42,7 +42,7 @@ export class Converter {
         instance: string,
         run: CapabilityBuilder<Params, SetValue>
     ) {
-        this.#converters.set(`${type},${instance}`, run(new CapabilityConverter<Params, SetValue>(this.name, type, instance)));
+        this.converters.set(`${type},${instance}`, run(new CapabilityConverter<Params, SetValue>(this.name, type, instance)));
         return this;
     }
 
@@ -97,7 +97,7 @@ export class Converter {
             id: device.id,
             name: device.name,
             room: zones[device.zone].name,
-            type: this.#type || getDeviceType(device),
+            type: this.type || getDeviceType(device),
             custom_data: [], capabilities: [], properties: []
         };
 
@@ -112,7 +112,7 @@ export class Converter {
         const capabilities = device.capabilitiesObj as HomeyCapabilities;
 
         await Promise.all(
-            this.#converters.values().map(async converter => {
+            this.converters.values().map(async converter => {
                 const capability = await converter.onGetParameters(capabilities);
                 response.custom_data.push(converter.name);
     
@@ -141,7 +141,7 @@ export class Converter {
         else if (device && (!device.ready || !device.available)) response.error_code = "DEVICE_UNREACHABLE";
         else {
             await Promise.all(
-                this.#converters.values().map(async converter => {
+                this.converters.values().map(async converter => {
                     const capability = await converter.onGetCapability(device);
                     capability !== undefined && response[converter.category]!.push(capability);
                 })
@@ -159,7 +159,7 @@ export class Converter {
         response.capabilities = await Promise.all(
             capabilities.map(async ({ type, state }) => {
                 const instance = state.instance;
-                const converter = this.#converters.get(`${type},${instance}`);
+                const converter = this.converters.get(`${type},${instance}`);
                 if (converter) return await converter.onSetCapability(state.value, handler);
                 
                 const result = { status: "ERROR", error_code: "INVALID_ACTION" };

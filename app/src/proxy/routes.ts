@@ -39,7 +39,7 @@ export const ProxyRoute = async (jwtSecret: string) => {
                 token: t.String()
             })
         })
-        .get("/sign", async ({ query: { app, proxy }, jwt }) => {
+        .get("/token", async ({ query: { app, proxy }, jwt }) => {
             return await jwt.sign({ app, proxy });
         }, {
             query: TokenSchema

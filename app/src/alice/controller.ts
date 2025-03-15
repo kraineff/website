@@ -17,14 +17,14 @@ export class AliceController {
         const storageAdapter = new AthomCloudAPI.StorageAdapter();
 
         storageAdapter.get = async () => {
-            const user = await sql`SELECT * FROM "User" WHERE token = ${token} LIMIT ${1}`;
+            const [user] = await sql`SELECT * FROM "User" WHERE token = ${token} LIMIT ${1}`;
             return user && JSON.parse(user.storage) || {};
         };
 
         storageAdapter.set = async (storage: any) => {
             if (!storage.user) return;
             const homeyId = storage.user.homeys[0].id;
-            const user = await sql`SELECT * FROM "User" WHERE id = ${homeyId} LIMIT ${1}`;
+            const [user] = await sql`SELECT * FROM "User" WHERE id = ${homeyId} LIMIT ${1}`;
 
             if (user) await sql`
                 UPDATE "User"
@@ -70,7 +70,7 @@ export class AliceController {
 
     async userRemove(token: string) {
         await this.getAthomUser(token);
-        const user = await sql`SELECT * FROM "User" WHERE token = ${token} LIMIT ${1}`;
+        const [user] = await sql`SELECT * FROM "User" WHERE token = ${token} LIMIT ${1}`;
 
         if (user) {
             this.homeyApis.delete(token);

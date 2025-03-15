@@ -1,6 +1,9 @@
 {
     "name": "app",
-    "module": "source/index.js",
+    "module": "src/index.js",
+    "scripts": {
+        "build": "bun build ./src/index.ts --target bun --minify --outfile build.js"
+    },
     "dependencies": {
         "@elysiajs/jwt": "^1.2.0",
         "elysia": "^1.2.11",
