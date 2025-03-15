@@ -1,6 +1,5 @@
 app/node_modules/
 app/build.js
-app/bun.lock
 app/.env
 nginx/certs/
 app.env
