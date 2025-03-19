@@ -1,6 +1,4 @@
 app/node_modules/
 app/build.js
-app/.env
-nginx/certs/
-app.env
+secrets/
 .DS_Store
