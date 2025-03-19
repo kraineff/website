@@ -9,6 +9,8 @@ services:
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - app
+    ports:
+      - "5432:5432"
   
   app:
     build: ./app
@@ -33,6 +35,9 @@ services:
       - "443:443"
     depends_on:
       - app  
+
+volumes:
+  postgres:
 
 networks:
   app:

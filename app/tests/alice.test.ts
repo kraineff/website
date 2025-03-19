@@ -7,7 +7,7 @@ describe("Тесты алисы", () => {
     const controller = new AliceController(Bun.env.HOMEY_ID!, Bun.env.HOMEY_SECRET!);
     let token: string;
     let device: DiscoveryDevice;
-
+    
     test("должен вернуть токен пользователя", async () => {
         const [user] = await sql`SELECT * FROM homey_user WHERE id = ${"6407152258e4600b841445be"} LIMIT ${1}`;
         token = user.token as string;
