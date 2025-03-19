@@ -3,13 +3,6 @@
 ## Обновляем пакеты
 sudo apt-get update && sudo apt-get upgrade -y
 
-## Устанавливаем UFW
-sudo apt-get install -y ufw
-sudo ufw allow ssh
-sudo ufw allow 443/tcp
-sudo ufw allow 10050/tcp
-sudo ufw enable
-
 ## Устанавливаем Docker
 apt-get install -y ca-certificates curl
 sudo install -m 0755 -d /etc/apt/keyrings
