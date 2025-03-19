@@ -9,7 +9,7 @@ describe("Тесты алисы", () => {
     let device: DiscoveryDevice;
 
     test("должен вернуть токен пользователя", async () => {
-        const [user] = await sql`SELECT * FROM "User" WHERE id = ${"6407152258e4600b841445be"} LIMIT ${1}`;
+        const [user] = await sql`SELECT * FROM homey_user WHERE id = ${"6407152258e4600b841445be"} LIMIT ${1}`;
         token = user.token as string;
         expect(token).toBeDefined();
     });

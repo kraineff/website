@@ -2,3 +2,6 @@ services:
   app:
     ports:
       - "3000:3000"
+  postgres:
+    ports:
+      - "5432:5432"
