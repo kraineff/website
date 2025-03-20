@@ -2,8 +2,7 @@
     "name": "app",
     "module": "src/index.js",
     "scripts": {
-        "dev": "NODE_ENV=development bun --env-file=../secrets/app.env --watch src/index.ts",
-        "test": "NODE_ENV=test PGHOST=localhost bun --env-file=../secrets/app.env test",
+        "dev": "NODE_ENV=development bun --watch src/index.ts",
         "build": "bun build ./src/index.ts --target bun --minify --outfile build.js"
     },
     "dependencies": {
