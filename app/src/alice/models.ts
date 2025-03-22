@@ -1,7 +1,7 @@
 import { Elysia, type Static, t } from "elysia";
 
 export type CapabilityParameters = Static<typeof CapabilityParameters>;
-const CapabilityParameters = t.Object({
+export const CapabilityParameters = t.Object({
 	type: t.String(),
 	retrievable: t.Optional(t.Boolean()),
 	reportable: t.Optional(t.Boolean()),
@@ -9,7 +9,7 @@ const CapabilityParameters = t.Object({
 });
 
 export type CapabilityState = Static<typeof CapabilityState>;
-const CapabilityState = t.Object({
+export const CapabilityState = t.Object({
 	type: t.String(),
 	state: t.Object({
 		instance: t.String(),
@@ -19,7 +19,7 @@ const CapabilityState = t.Object({
 });
 
 export type Device = Static<typeof Device>;
-const Device = t.Object({
+export const Device = t.Object({
 	id: t.String(),
 	name: t.String(),
 	description: t.Optional(t.String()),
@@ -39,7 +39,7 @@ const Device = t.Object({
 });
 
 export type UserDevicesResponse = Static<typeof UserDevicesResponse>;
-const UserDevicesResponse = t.Object({
+export const UserDevicesResponse = t.Object({
 	request_id: t.String({ format: "uuid" }),
 	payload: t.Object({
 		user_id: t.String(),
@@ -48,18 +48,18 @@ const UserDevicesResponse = t.Object({
 });
 
 export type DeviceQuery = Static<typeof DeviceQuery>;
-const DeviceQuery = t.Object({
+export const DeviceQuery = t.Object({
 	id: t.String(),
 	custom_data: t.Array(t.String()),
 });
 
 export type UserDevicesQuery = Static<typeof UserDevicesQuery>;
-const UserDevicesQuery = t.Object({
+export const UserDevicesQuery = t.Object({
 	devices: t.Array(DeviceQuery),
 });
 
 export type DeviceQueryResult = Static<typeof DeviceQueryResult>;
-const DeviceQueryResult = t.Object({
+export const DeviceQueryResult = t.Object({
 	id: t.String(),
 	capabilities: t.Optional(t.Array(CapabilityState)),
 	properties: t.Optional(t.Array(CapabilityState)),
@@ -68,7 +68,7 @@ const DeviceQueryResult = t.Object({
 });
 
 export type UserDevicesQueryResponse = Static<typeof UserDevicesQueryResponse>;
-const UserDevicesQueryResponse = t.Object({
+export const UserDevicesQueryResponse = t.Object({
 	request_id: t.String({ format: "uuid" }),
 	payload: t.Object({
 		devices: t.Array(DeviceQueryResult),
@@ -76,28 +76,28 @@ const UserDevicesQueryResponse = t.Object({
 });
 
 export type DeviceAction = Static<typeof DeviceAction>;
-const DeviceAction = t.Object({
+export const DeviceAction = t.Object({
 	id: t.String(),
 	custom_data: t.Array(t.String()),
 	capabilities: t.Array(CapabilityState),
 });
 
 export type UserDevicesAction = Static<typeof UserDevicesAction>;
-const UserDevicesAction = t.Object({
+export const UserDevicesAction = t.Object({
 	payload: t.Object({
 		devices: t.Array(DeviceAction),
 	}),
 });
 
 export type DeviceActionStatus = Static<typeof DeviceActionStatus>;
-const DeviceActionStatus = t.Object({
+export const DeviceActionStatus = t.Object({
 	status: t.String(),
 	error_code: t.Optional(t.String()),
 	error_message: t.Optional(t.String()),
 });
 
 export type DeviceActionCapabilityState = Static<typeof DeviceActionCapabilityState>;
-const DeviceActionCapabilityState = t.Object({
+export const DeviceActionCapabilityState = t.Object({
 	type: t.String(),
 	state: t.Object({
 		instance: t.String(),
@@ -106,14 +106,14 @@ const DeviceActionCapabilityState = t.Object({
 });
 
 export type DeviceActionResult = Static<typeof DeviceActionResult>;
-const DeviceActionResult = t.Object({
+export const DeviceActionResult = t.Object({
 	id: t.String(),
 	capabilities: t.Optional(t.Array(DeviceActionCapabilityState)),
 	action_result: t.Optional(DeviceActionStatus),
 });
 
 export type UserDevicesActionResponse = Static<typeof UserDevicesActionResponse>;
-const UserDevicesActionResponse = t.Object({
+export const UserDevicesActionResponse = t.Object({
 	request_id: t.String({ format: "uuid" }),
 	payload: t.Object({
 		devices: t.Array(DeviceActionResult),

@@ -1,17 +1,14 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 import { jwt } from "@elysiajs/jwt";
-
-const TokenSchema = t.Object({
-    app: t.String(),
-    proxy: t.String()
-});
+import { ProxyModels, ProxyToken } from "./models";
 
 export const ProxyRoutes = async (jwtSecret: string) => {    
     return new Elysia({ prefix: "/proxy" })
+        .use(ProxyModels)
         .use(jwt({
             name: "jwt",
             secret: jwtSecret,
-            schema: TokenSchema
+            schema: ProxyToken
         }))
         .get("/", async ({ query: { token }, jwt }) => {
             const payload = await jwt.verify(token);
@@ -35,8 +32,6 @@ export const ProxyRoutes = async (jwtSecret: string) => {
                 default: return new Response("Неизвестное приложение", { status: 400 });
             }
         }, {
-            query: t.Object({
-                token: t.String()
-            })
+            query: "token.query"
         });
 };
