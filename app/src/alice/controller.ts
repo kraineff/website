@@ -96,17 +96,17 @@ export class AliceController {
 		const api = await this.getHomeyAPI(token);
 		const devices = await api.devices.getDevices();
 		const zones = await api.zones.getZones();
-
 		const result: Device[] = [];
+		
 		await Promise.all(
 			Object.values(devices)
 				.filter((device) => !device.driverId.includes(":com.yandex:"))
 				.map(async (device) => {
 					const converterNames = Object.keys(device.capabilitiesObj);
 					const converter = await this.homeyConverters.merge([...converterNames, device.driverId]);
-
-					const _device = await converter.getDevice(device, zones);
-					_device && result.push(_device);
+					await converter.getDevice(device, zones)
+						.then((device) => result.push(device))
+						.catch(console.error);
 				}),
 		);
 

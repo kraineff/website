@@ -9,6 +9,9 @@ type ParamsHandler<Params> = (capabilities: HomeyCapabilities) => Partial<Params
 type Category = "capabilities" | "properties";
 
 export class CapabilityConverter<Params extends Record<string, unknown>, SetValue> {
+	readonly name: string;
+	readonly type: string;
+	readonly instance: string;
 	readonly category: Category;
 	private parameters: Params = {} as Params;
 
@@ -16,11 +19,10 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 	private onGetHandler?: (device: HomeyAPIV2.ManagerDevices.Device) => SetValue | undefined;
 	private onSetHandler?: OnSetValueHandler<SetValue>;
 
-	constructor(
-		readonly name: string,
-		readonly type: string,
-		readonly instance: string
-	) {
+	constructor(name: string, type: string, instance: string) {
+		this.name = name;
+		this.type = type;
+		this.instance = instance;
 		this.category = type.split(".")[1] as Category;
 	}
 

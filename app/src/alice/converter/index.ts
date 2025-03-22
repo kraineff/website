@@ -14,13 +14,12 @@ type CapabilityBuilder<Params, SetValue> = (
 ) => typeof converter;
 
 export class Converter {
+	readonly name: string;
 	private type?: string;
 	private converters = new Map<string, CapabilityConverter<any, any>>();
 
-	constructor(
-		readonly name: string,
-		type?: string,
-	) {
+	constructor(name: string, type?: string) {
+		this.name = name;
 		this.type = type;
 	}
 
@@ -121,7 +120,7 @@ export class Converter {
 	async getDevice(
 		device: HomeyAPIV2.ManagerDevices.Device,
 		zones: Record<string, HomeyAPIV2.ManagerZones.Zone>,
-	) {
+	): Promise<Device> {
 		const response: Device = {
 			id: device.id,
 			name: device.name,
@@ -134,7 +133,7 @@ export class Converter {
 
 		// Специальные команды
 		const note = device.note;
-		if (note?.includes("@hidden;")) return;
+		if (note?.includes("@hidden;")) throw new Error("Устройство скрыто");
 		if (note?.includes("@type="))
 			response.type = `devices.types.${note.split("@type=")[1].split(";")[0]}`;
 
@@ -163,7 +162,8 @@ export class Converter {
 
 		capabilityColor && response.capabilities.push(capabilityColor);
 		response.custom_data = [...new Set(response.custom_data)];
-		return response.custom_data.length ? response : undefined;
+		if (response.custom_data.length) return response;
+		throw new Error("Устройство не поддерживается");
 	}
 
 	async getStates(devices: Record<string, HomeyAPIV2.ManagerDevices.Device>, deviceId: string) {
