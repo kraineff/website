@@ -1,11 +1,18 @@
 import { AthomCloudAPI } from "homey-api";
 import { Converters } from "./converters";
 import { sql } from "bun";
-import type { Device, DeviceAction, DeviceActionResult, DeviceQuery, DeviceQueryResult, UserDevicesResponse } from "./models";
-import { AthomStorage, HomeyDevices, HomeyZones } from "./types/homey";
+import type {
+	Device,
+	DeviceAction,
+	DeviceActionResult,
+	DeviceQuery,
+	DeviceQueryResult,
+	UserDevicesResponse,
+} from "./models";
+import type { AthomStorage, HomeyAPI } from "./types/homey";
 
 export class AliceController {
-	private homeyApis = new Map<string, any>();
+	private homeyApis = new Map<string, HomeyAPI>();
 	private homeyConverters: Converters;
 	private readonly CACHE_CLEANUP_INTERVAL = 30 * 60 * 1000;
 
@@ -64,14 +71,15 @@ export class AliceController {
 	}
 
 	private async getHomeyAPI(token: string) {
-		if (token in this.homeyApis) return this.homeyApis.get(token);
+		const cacheHomeyApi = this.homeyApis.get(token);
+		if (cacheHomeyApi) return cacheHomeyApi;
 
 		const user = await this.getAthomUser(token);
 		const homey = await user.getFirstHomey();
-		const homeyApi = await homey.authenticate({ strategy: "cloud" });
+		const homeyApi = (await homey.authenticate({ strategy: "cloud" })) as unknown as HomeyAPI;
 
 		this.homeyApis.set(token, homeyApi);
-		return this.homeyApis.get(token);
+		return homeyApi;
 	}
 
 	async userRemove(token: string) {
@@ -86,19 +94,16 @@ export class AliceController {
 
 	async getDevices(token: string): Promise<UserDevicesResponse["payload"]> {
 		const api = await this.getHomeyAPI(token);
-		const devices: HomeyDevices = await api.devices.getDevices();
-		const zones: HomeyZones = await api.zones.getZones();
-		
+		const devices = await api.devices.getDevices();
+		const zones = await api.zones.getZones();
+
 		const result: Device[] = [];
 		await Promise.all(
 			Object.values(devices)
 				.filter((device) => !device.driverId.includes(":com.yandex:"))
 				.map(async (device) => {
 					const converterNames = Object.keys(device.capabilitiesObj);
-					const converter = await this.homeyConverters.merge([
-						...converterNames,
-						device.driverId,
-					]);
+					const converter = await this.homeyConverters.merge([...converterNames, device.driverId]);
 
 					const _device = await converter.getDevice(device, zones);
 					_device && result.push(_device);
@@ -110,8 +115,8 @@ export class AliceController {
 
 	async getStates(token: string, queries: DeviceQuery[]): Promise<DeviceQueryResult[]> {
 		const api = await this.getHomeyAPI(token);
-		const devices: HomeyDevices = await api.devices.getDevices();
-		
+		const devices = await api.devices.getDevices();
+
 		return await Promise.all(
 			queries.map(async (query) => {
 				const converterNames = query.custom_data;
@@ -128,9 +133,12 @@ export class AliceController {
 			actions.map(async (action) => {
 				const converterNames = action.custom_data;
 				const converter = await this.homeyConverters.merge(converterNames);
-				const capabilities = await converter.setStates(action.capabilities, async (capabilityId, value) => {
-					return api.devices.setCapabilityValue({ capabilityId, deviceId: action.id, value });
-				});
+				const capabilities = await converter.setStates(
+					action.capabilities,
+					async (capabilityId, value) => {
+						await api.devices.setCapabilityValue({ capabilityId, deviceId: action.id, value });
+					},
+				);
 				return { id: action.id, capabilities };
 			}),
 		);

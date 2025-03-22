@@ -1,8 +1,9 @@
-import { HomeyAPIV2 } from "homey-api";
-import { HomeyCapabilities, HomeyValue } from "../types/homey";
-import { CapabilityState } from "../models";
+import type { HomeyAPIV2 } from "homey-api";
+import type { HomeyCapabilities, HomeyDeviceSettings, HomeyValue } from "../types/homey";
+import type { CapabilityState } from "../models";
 
-export type SetValueHandler = (capabilityId: string, value: HomeyValue) => Promise<unknown>;
+export type SetValueHandler = (capabilityId: string, value: HomeyValue) => Promise<void>;
+export type OnSetValueHandler<SetValue> = (value: SetValue) => Record<string, HomeyValue>;
 
 type ParamsHandler<Params> = (capabilities: HomeyCapabilities) => Partial<Params>;
 type Category = "capabilities" | "properties";
@@ -13,7 +14,7 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 
 	private onParamsHandler?: ParamsHandler<Params>;
 	private onGetHandler?: (device: HomeyAPIV2.ManagerDevices.Device) => SetValue | undefined;
-	private onSetHandler?: (value: SetValue) => Record<string, HomeyValue>;
+	private onSetHandler?: OnSetValueHandler<SetValue>;
 
 	constructor(
 		readonly name: string,
@@ -38,7 +39,7 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 		return this;
 	}
 
-	getCapability<ValueType>(
+	getCapability<ValueType extends HomeyValue>(
 		capabilityId: string,
 		handler?: (value: ValueType) => SetValue | "@prev" | "@break",
 	) {
@@ -55,13 +56,14 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 
 				if (capability.type === "boolean" && capability.getable === false) return false as SetValue;
 
-				const newValue = newHandler(capability.value);
+				const newValue = newHandler(capability.value as ValueType);
 				if (newValue === "@break") return undefined;
-				else if (newValue === "@prev") return value;
-				else if (typeof newValue === "number") return Math.abs(newValue) as SetValue;
-				else if (typeof newValue === "object" && typeof value === "object")
+				if (newValue === "@prev") return value;
+				if (typeof newValue === "number") return Math.abs(newValue) as SetValue;
+				if (typeof newValue === "object" && typeof value === "object")
 					return { ...value, ...newValue } as SetValue;
-				else return newValue as SetValue;
+
+				return newValue as SetValue;
 			} catch (error) {
 				return undefined;
 			}
@@ -69,7 +71,7 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 		return this;
 	}
 
-	getSetting<ValueType>(
+	getSetting<ValueType extends HomeyValue>(
 		settingId: string,
 		handler?: (value: ValueType) => SetValue | "@prev" | "@break",
 	) {
@@ -78,18 +80,19 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 
 		this.onGetHandler = (device) => {
 			try {
-				const setting = (device.settings as Record<string, any>)?.[settingId];
+				const setting = (device.settings as HomeyDeviceSettings)?.[settingId];
 				const value = currentHandler(device);
 
 				if (!setting || setting.value === undefined || setting.value === null) return value;
 
-				const newValue = newHandler(setting);
+				const newValue = newHandler(setting.value as ValueType);
 				if (newValue === "@break") return undefined;
-				else if (newValue === "@prev") return value;
-				else if (typeof newValue === "number") return Math.abs(newValue) as SetValue;
-				else if (typeof newValue === "object" && typeof value === "object")
+				if (newValue === "@prev") return value;
+				if (typeof newValue === "number") return Math.abs(newValue) as SetValue;
+				if (typeof newValue === "object" && typeof value === "object")
 					return { ...value, ...newValue } as SetValue;
-				else return newValue as SetValue;
+				
+				return newValue as SetValue;
 			} catch (error) {
 				return undefined;
 			}
@@ -97,11 +100,11 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 		return this;
 	}
 
-	setCapability<ValueType>(
+	setCapability<ValueType extends HomeyValue>(
 		capabilityId: string,
 		handler?: (value: SetValue) => ValueType | "@break",
 	) {
-		const currentHandler = this.onSetHandler ?? (() => ({}) as any);
+		const currentHandler = this.onSetHandler ?? (() => ({})) as OnSetValueHandler<SetValue>;
 		const newHandler = handler ?? ((value) => value as unknown as ValueType);
 
 		this.onSetHandler = (setValue) => {
@@ -176,7 +179,7 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 	async onSetCapability(value: CapabilityState["state"]["value"], handler: SetValueHandler) {
 		const promises = Object
 			.entries(this.onSetHandler?.(value as SetValue) || {})
-			.map(async ([capabilityId, value]) => handler(capabilityId, value!));
+			.map(async ([capabilityId, value]) => handler(capabilityId, value));
 
 		await Promise.all(promises).catch((error: Error) => {
 			const message = error?.message || "";
