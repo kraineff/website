@@ -1,6 +1,8 @@
 import { HomeyAPIV2 } from "homey-api";
-import { HomeyCapabilities } from "../types";
-import { makeStateBody } from "./utils";
+import { HomeyCapabilities, HomeyValue } from "../types/homey";
+import { CapabilityState } from "../models";
+
+export type SetValueHandler = (capabilityId: string, value: HomeyValue) => Promise<unknown>;
 
 type ParamsHandler<Params> = (capabilities: HomeyCapabilities) => Partial<Params>;
 type Category = "capabilities" | "properties";
@@ -11,7 +13,7 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 
 	private onParamsHandler?: ParamsHandler<Params>;
 	private onGetHandler?: (device: HomeyAPIV2.ManagerDevices.Device) => SetValue | undefined;
-	private onSetHandler?: (value: SetValue) => Record<string, unknown>;
+	private onSetHandler?: (value: SetValue) => Record<string, HomeyValue>;
 
 	constructor(
 		readonly name: string,
@@ -106,10 +108,10 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 			try {
 				const values = currentHandler(setValue);
 				const newValue = newHandler(setValue);
-				values[capabilityId] =
-					newValue === "@break" || newValue === null || newValue === undefined
-						? undefined
-						: newValue;
+
+				if (newValue === "@break" || newValue === null || newValue === undefined)
+					delete values[capabilityId];
+				else values[capabilityId] = newValue;
 				return values;
 			} catch (error) {
 				return {};
@@ -168,31 +170,22 @@ export class CapabilityConverter<Params extends Record<string, unknown>, SetValu
 	}
 
 	async onGetCapability(device: HomeyAPIV2.ManagerDevices.Device) {
-		const value = this.onGetHandler ? this.onGetHandler(device) : undefined;
-		return value !== undefined ? makeStateBody(this.type, this.instance, { value }) : value;
+		return this.onGetHandler?.(device);
 	}
 
-	async onSetCapability(value: any, handler: (capabilityId: string, value: any) => Promise<any>) {
-		const values = Object.entries(this.onSetHandler ? this.onSetHandler(value) : {});
-		const actionResult = await Promise.all(
-			values.map(
-				async ([capabilityId, value]) => value !== undefined && handler(capabilityId, value),
-			),
-		)
-			.then(() => ({ status: "DONE" }))
-			.catch((error: Error) => {
-				const errorMsg = error?.message || "";
-				const result = { status: "ERROR", error_code: "DEVICE_UNREACHABLE" };
-				console.log(errorMsg);
+	async onSetCapability(value: CapabilityState["state"]["value"], handler: SetValueHandler) {
+		const promises = Object
+			.entries(this.onSetHandler?.(value as SetValue) || {})
+			.map(async ([capabilityId, value]) => handler(capabilityId, value!));
 
-				if (errorMsg.startsWith("Invalid Capability:")) return { status: "DONE" };
-				if (errorMsg.startsWith("Not Found: Device with ID"))
-					result.error_code = "DEVICE_NOT_FOUND";
-				if (errorMsg.startsWith("Power on in progress...")) result.error_code = "DEVICE_BUSY";
+		await Promise.all(promises).catch((error: Error) => {
+			const message = error?.message || "";
 
-				return result;
-			});
+			if (message.startsWith("Invalid Capability:")) return;
+			if (message.startsWith("Not Found: Device with ID")) throw new Error("DEVICE_NOT_FOUND");
+			if (message.startsWith("Power on in progress...")) throw new Error("DEVICE_BUSY");
 
-		return makeStateBody(this.type, this.instance, { action_result: actionResult });
+			throw new Error("DEVICE_UNREACHABLE");
+		});
 	}
 }

@@ -1,5 +1,5 @@
+import { YandexDevice } from "../types/yandex";
 import { Converter } from "../converter";
-import { DeviceType } from "../types";
 
 export const DeviceConverters = {
     "codes.lucasvdh.android-tv:remote": () => Converter
@@ -51,7 +51,7 @@ export const DeviceConverters = {
             .getCapability<boolean>("alarm_bin_removed", value => ["closed", "opened"][Number(value)])),
     
     "com.nokia.health:user": () => Converter
-        .create("com.nokia.health:user", DeviceType.Meter)
+        .create("com.nokia.health:user", YandexDevice.Meter)
         .createFloat("temperature", run => run
             .setParameters({ unit: "temperature.celsius" })
             .getCapability<number>("nh_measure_body_temperature"))

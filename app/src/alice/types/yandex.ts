@@ -1,4 +1,4 @@
-export enum DeviceType {
+export enum YandexDevice {
     Cooking = "devices.types.cooking",
     CookingCoffee = "devices.types.cooking.coffee_maker",
     CookingKettle = "devices.types.cooking.kettle",

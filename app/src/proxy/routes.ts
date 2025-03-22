@@ -6,7 +6,7 @@ const TokenSchema = t.Object({
     proxy: t.String()
 });
 
-export const ProxyRoute = async (jwtSecret: string) => {    
+export const ProxyRoutes = async (jwtSecret: string) => {    
     return new Elysia({ prefix: "/proxy" })
         .use(jwt({
             name: "jwt",

@@ -1,40 +1,49 @@
-import { Elysia, t } from "elysia";
+import { Elysia } from "elysia";
 import { AliceController } from "./controller";
+import { AliceModels } from "./models";
 
-const UserHeaders = t.Object({
-    "authorization": t.TemplateLiteral("Bearer ${string}"),    
-    "x-request-id":  t.String({ format: "uuid", default: crypto.randomUUID() }),
-    "user-agent":    t.String({ pattern: "Yandex LLC", default: "" })
-});
-
-export const AliceRoute = async (clientId: string, clientSecret: string) => {    
+export const AliceRoutes = async (clientId: string, clientSecret: string) => {    
     const service = new AliceController(clientId, clientSecret);
     
     return new Elysia({ prefix: "/alice/v1.0" })
-        // .onAfterResponse(() => Bun.gc(true))
+        .use(AliceModels)
         .head("/", () => new Response(null, { status: 200 }))
-        .group("/user", { headers: UserHeaders }, app => app
-            .derive(({ headers }) => ({
+        .group("/user", { headers: "user.headers" }, app => app
+            .resolve(({ headers }) => ({
                 token: headers.authorization.slice(7),
                 requestId: headers["x-request-id"]
             }))
             .post("/unlink", async ({ token, requestId }) => {
                 await service.userRemove(token);
                 return { request_id: requestId };
+            }, {
+                response: "user.unlink"
             })
             .group("/devices", app => app
                 .get("/", async ({ token, requestId }) => ({
                     request_id: requestId,
                     payload: await service.getDevices(token)
-                }))
+                }), {
+                    response: "user.devices.response"
+                })
                 .post("/query", async ({ token, requestId, body }) => ({
                     request_id: requestId,
-                    payload: await service.getStates(token, <any>body)
-                }))
+                    payload: {
+                        devices: await service.getStates(token, body.devices)
+                    }
+                }), {
+                    body: "user.devices.query",
+                    response: "user.devices.query.response"
+                })
                 .post("/action", async ({ token, requestId, body }) => ({
                     request_id: requestId,
-                    payload: await service.setStates(token, <any>body)
-                }))
+                    payload: {
+                        devices: await service.setStates(token, body.payload.devices)
+                    }
+                }), {
+                    body: "user.devices.action",
+                    response: "user.devices.action.response"
+                })
             )
         );
 };

@@ -1,6 +1,6 @@
 import { Elysia } from "elysia";
-import { AliceRoute } from "./alice/routes";
-import { ProxyRoute } from "./proxy/routes";
+import { AliceRoutes } from "./alice/routes";
+import { ProxyRoutes } from "./proxy/routes";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -13,6 +13,6 @@ const env = envSchema.parse(Bun.env);
 
 new Elysia()
     .all("/", () => "Hello World")
-    .use(AliceRoute(env.HOMEY_ID, env.HOMEY_SECRET))
-    .use(ProxyRoute(env.JWT_SECRET))
+    .use(AliceRoutes(env.HOMEY_ID, env.HOMEY_SECRET))
+    .use(ProxyRoutes(env.JWT_SECRET))
     .listen(3000);

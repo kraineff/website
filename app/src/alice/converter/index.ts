@@ -1,7 +1,8 @@
 import { HomeyAPIV2 } from "homey-api";
-import { CapabilityAction, CapabilityState, DiscoveryDevice, HomeyCapabilities, QueryDevice } from "../types";
-import { CapabilityConverter } from "./capability";
-import { getDeviceType, makeStateBody } from "./utils";
+import { CapabilityConverter, SetValueHandler } from "./capability";
+import { getDeviceType } from "./utils";
+import { CapabilityState, Device, DeviceActionCapabilityState, DeviceQueryResult } from "../models"
+import { HomeyCapabilities } from "../types/homey";
 
 type CapabilityBuilder<Params, SetValue> =
     (converter: CapabilityConverter<Params & { retrievable?: boolean }, SetValue>) => typeof converter;
@@ -93,7 +94,7 @@ export class Converter {
     }
 
     async getDevice(device: HomeyAPIV2.ManagerDevices.Device, zones: Record<string, HomeyAPIV2.ManagerZones.Zone>) {
-        const response: DiscoveryDevice = {
+        const response: Device = {
             id: device.id,
             name: device.name,
             room: zones[device.zone].name,
@@ -131,42 +132,51 @@ export class Converter {
         return response.custom_data.length ? response : undefined;
     }
 
-    async getStates(deviceId: string, device?: HomeyAPIV2.ManagerDevices.Device) {
-        const response: QueryDevice = {
-            id: device?.id || deviceId,
+    async getStates(devices: Record<string, HomeyAPIV2.ManagerDevices.Device>, deviceId: string) {
+        const device = devices[deviceId];
+        const result: DeviceQueryResult = {
+            id: deviceId,
             capabilities: [], properties: []
         };
         
-        if (!device) response.error_code = "DEVICE_NOT_FOUND";
-        else if (device && (!device.ready || !device.available)) response.error_code = "DEVICE_UNREACHABLE";
+        if (!device) result.error_code = "DEVICE_NOT_FOUND";
+        else if (device && (!device.ready || !device.available)) result.error_code = "DEVICE_UNREACHABLE";
         else {
             await Promise.all(
                 this.converters.values().map(async converter => {
-                    const capability = await converter.onGetCapability(device);
-                    capability !== undefined && response[converter.category]!.push(capability);
+                    const value = await converter.onGetCapability(device);
+                    if (value === undefined) return;
+
+                    result[converter.category]?.push({
+                        type: converter.type,
+                        state: {
+                            instance: converter.instance,
+                            value
+                        }
+                    });
                 })
             );
         }
 
-        return response;
+        return result;
     }
 
-    async setStates(capabilities: Array<CapabilityState>, handler: (capabilityId: string, value: any) => Promise<any>) {
-        const response: Record<"capabilities", Array<CapabilityAction>> = {
-            capabilities: []
-        };
-
-        response.capabilities = await Promise.all(
-            capabilities.map(async ({ type, state }) => {
-                const instance = state.instance;
+    async setStates(states: Array<CapabilityState>, handler: SetValueHandler): Promise<DeviceActionCapabilityState[]> {
+        return await Promise.all(
+            states.map(async ({ type, state: { instance, value } }) => {
                 const converter = this.converters.get(`${type},${instance}`);
-                if (converter) return await converter.onSetCapability(state.value, handler);
-                
-                const result = { status: "ERROR", error_code: "INVALID_ACTION" };
-                return makeStateBody(type, instance, { action_result: result });
+                const result = await converter?.onSetCapability(value, handler)
+                    .then(() => ({ status: "DONE" }))
+                    .catch((error: Error) => ({ status: "ERROR", error_code: error.message }));
+
+                return {
+                    type,
+                    state: {
+                        instance,
+                        action_result: result || { status: "ERROR", error_code: "INVALID_ACTION" }
+                    }
+                };
             })
         );
-
-        return response;
     }
 }
