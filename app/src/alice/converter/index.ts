@@ -1,5 +1,5 @@
 import type { HomeyAPIV2 } from "homey-api";
-import { CapabilityConverter, type SetValueHandler } from "./capability";
+import { CapabilityConverter, type OnSetValueHandler } from "./capability";
 import { getDeviceType } from "./utils";
 import type {
 	CapabilityState,
@@ -9,14 +9,14 @@ import type {
 } from "../models";
 import type { HomeyCapabilities } from "../types/homey";
 
-type CapabilityBuilder<Params, SetValue> = (
-	converter: CapabilityConverter<Params & { retrievable?: boolean }, SetValue>,
+type CapabilityBuilder<Params, GetValue, SetValue> = (
+	converter: CapabilityConverter<Params & { retrievable?: boolean }, GetValue, SetValue>,
 ) => typeof converter;
 
 export class Converter {
 	readonly name: string;
 	private type?: string;
-	private converters = new Map<string, CapabilityConverter<any, any>>();
+	private converters = new Map<string, CapabilityConverter<any, any, any>>();
 
 	constructor(name: string, type?: string) {
 		this.name = name;
@@ -47,24 +47,31 @@ export class Converter {
 		return this;
 	}
 
-	private createConverter<Params extends Record<string, any>, SetValue>(
+	private createConverter<Params extends Record<string, any>, GetValue, SetValue>(
 		type: string,
 		instance: string,
-		run: CapabilityBuilder<Params, SetValue>,
+		run: CapabilityBuilder<Params, GetValue, SetValue>,
 	) {
 		this.converters.set(
 			`${type},${instance}`,
-			run(new CapabilityConverter<Params, SetValue>(this.name, type, instance)),
+			run(new CapabilityConverter<Params, GetValue, SetValue>(this.name, type, instance)),
 		);
 		return this;
 	}
 
-	createState(run: CapabilityBuilder<{ split?: boolean }, boolean>) {
+	createState(run: CapabilityBuilder<{ split?: boolean }, boolean, boolean>) {
 		return this.createConverter("devices.capabilities.on_off", "on", run);
 	}
 
-	createColor(
-		instance: string,
+	createColor<
+		Instance extends string,
+		Value = Instance extends "hsv" ? {
+			h: number;
+			s: number;
+			v: number;
+		} : Instance extends "scene" ? string : number
+	>(
+		instance: Instance,
 		run: CapabilityBuilder<
 			{
 				temperature_k?: {
@@ -73,17 +80,18 @@ export class Converter {
 				};
 				scenes?: string[];
 			},
-			any
+			Value,
+			Value
 		>,
 	) {
 		return this.createConverter("devices.capabilities.color_setting", instance, run);
 	}
 
-	createVideo(run: CapabilityBuilder<{ protocols: string[] }, { protocols: string[] }>) {
+	createVideo(run: CapabilityBuilder<{ protocols: string[] }, { protocols: string[] }, null>) {
 		return this.createConverter("devices.capabilities.video_stream", "get_stream", run);
 	}
 
-	createMode(instance: string, run: CapabilityBuilder<{ modes: string[] }, string>) {
+	createMode(instance: string, run: CapabilityBuilder<{ modes: string[] }, string, string>) {
 		return this.createConverter("devices.capabilities.mode", instance, run);
 	}
 
@@ -99,21 +107,22 @@ export class Converter {
 					precision: number;
 				};
 			},
+			number,
 			number
 		>,
 	) {
 		return this.createConverter("devices.capabilities.range", instance, run);
 	}
 
-	createToggle(instance: string, run: CapabilityBuilder<Record<string, unknown>, boolean>) {
+	createToggle(instance: string, run: CapabilityBuilder<Record<string, unknown>, boolean, boolean>) {
 		return this.createConverter("devices.capabilities.toggle", instance, run);
 	}
 
-	createFloat(instance: string, run: CapabilityBuilder<{ unit?: string }, number>) {
+	createFloat(instance: string, run: CapabilityBuilder<{ unit?: string }, number, null>) {
 		return this.createConverter("devices.properties.float", instance, run);
 	}
 
-	createEvent(instance: string, run: CapabilityBuilder<{ events: string[] }, string>) {
+	createEvent(instance: string, run: CapabilityBuilder<{ events: string[] }, string, null>) {
 		return this.createConverter("devices.properties.event", instance, run);
 	}
 
@@ -199,7 +208,7 @@ export class Converter {
 
 	async setStates(
 		states: Array<CapabilityState>,
-		handler: SetValueHandler,
+		handler: OnSetValueHandler,
 	): Promise<DeviceActionCapabilityState[]> {
 		return await Promise.all(
 			states.map(async ({ type, state: { instance, value } }) => {

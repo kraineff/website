@@ -8,7 +8,7 @@ export class Converters {
 		...DeviceConverters,
 	};
 	private cache: Map<string, Converter> = new Map();
-	private readonly CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000;
+	private readonly CACHE_CLEANUP_INTERVAL = 5 * 60_000;
 
 	constructor() {
 		setInterval(() => this.cache.clear(), this.CACHE_CLEANUP_INTERVAL);
