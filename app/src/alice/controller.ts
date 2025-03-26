@@ -106,7 +106,7 @@ export class AliceController {
 					const converter = await this.homeyConverters.merge([...converterNames, device.driverId]);
 					await converter.getDevice(device, zones)
 						.then((device) => result.push(device))
-						.catch(console.error);
+						.catch(() => {});
 				}),
 		);
 

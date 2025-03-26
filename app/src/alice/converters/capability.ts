@@ -1,5 +1,35 @@
 import { Converter } from "../converter";
 
+const LightHSVConverter = (name: string) => {
+    return () => Converter
+        .create(name)
+        .createColor("hsv", run => run
+            .getCapabilities<{
+                light_hue: number,
+                light_saturation: number,
+                light_mode: string,
+            }>(({ light_hue, light_saturation, light_mode }) => {
+                if (light_mode !== "color") {
+                    return undefined;
+                }
+                return {
+                    h: Math.round((light_hue ?? 1) * 360),
+                    s: Math.round((light_saturation ?? 1) * 100),
+                    v: 100,
+                };
+            })
+            .setCapabilities<{
+                light_hue: number,
+                light_saturation: number,
+                light_mode: string,
+            }>(value => ({
+                light_hue: value.h / 360,
+                light_saturation: value.s / 100,
+                light_mode: "color",
+            }))
+        );
+}
+
 export const CapabilityConverters = {
     "alarm_battery": () => Converter
         .create("alarm_battery")
@@ -125,33 +155,9 @@ export const CapabilityConverters = {
             .setCapability<boolean>("garagedoor_closed", value => !value)
         ),
     
-    "light_hue": () => Converter
-        .create("light_hue")
-        .createColor("hsv", run => run
-            .getCapabilities<{
-                light_hue: number,
-                light_saturation: number,
-                light_mode: string,
-            }>(({ light_hue, light_saturation, light_mode }) => {
-                if (light_mode !== "color") {
-                    return undefined;
-                }
-                return {
-                    h: Math.round((light_hue || 1) * 360),
-                    s: Math.round((light_saturation || 1) * 100),
-                    v: 100,
-                };
-            })
-            .setCapabilities<{
-                light_hue: number,
-                light_saturation: number,
-                light_mode: string,
-            }>(value => ({
-                light_hue: value.h / 360,
-                light_saturation: value.s / 100,
-                light_mode: "color",
-            }))
-        ),
+    "light_hue": LightHSVConverter("light_hue"),
+
+    "light_saturation": LightHSVConverter("light_saturation"),
     
     "light_temperature": () => Converter
         .create("light_temperature")

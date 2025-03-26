@@ -32,9 +32,9 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 		this.parameters = parameters as Params;
 
 		if (parse) {
-			const currentHandler = this.onGetParamsHandler || (() => ({}));
+			const prevHandler = this.onGetParamsHandler || (() => ({}));
 			this.onGetParamsHandler = (capabilities) => ({
-				...currentHandler(capabilities),
+				...prevHandler(capabilities),
 				...parse(capabilities),
 			});
 		}
@@ -47,6 +47,9 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 			[K in keyof CapabilityValues]: CapabilityValues[K] | undefined;
 		}) => GetValue | undefined
 	) {
+		const prevHandler = this.onGetHandler || (() => undefined) as OnGetHandler<GetValue>;
+		const newHandler = handler;
+		
 		this.onGetHandler = (device) => {
 			const capabilities = device.capabilitiesObj as HomeyCapabilities;
 			const capabilityValues = Object
@@ -56,8 +59,8 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 					[capability.id]: capability.value ?? undefined,
 				}), {} as CapabilityValues);
 
-			const value = handler(capabilityValues);
-			return value === undefined ? this.onGetHandler?.(device) : value;
+			const value = newHandler(capabilityValues);
+			return value === undefined ? prevHandler(device) : value;
 		};
 		
 		return this;
@@ -67,19 +70,19 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 		capabilityId: string,
 		handler?: (value: CapabilityValue) => GetValue | undefined,
 	) {
+		const prevHandler = this.onGetHandler || (() => undefined) as OnGetHandler<GetValue>;
+		const newHandler = handler || ((value) => value as unknown as GetValue);
+
 		this.onGetHandler = (device) => {
 			const capabilities = device.capabilitiesObj as HomeyCapabilities;
 			const capability = capabilities?.[capabilityId];
-			const prevValue = this.onGetHandler?.(device);
+			const prevValue = prevHandler(device);
 
 			if (capability?.value === undefined || capability?.value === null) return prevValue;
 			if (capability?.type === "boolean" && !capability.getable) return false as GetValue;
 
 			const capabilityValue = capability?.value as CapabilityValue;
-			const value = handler ?
-				handler(capabilityValue) :
-				capabilityValue as unknown as GetValue;
-
+			const value = newHandler(capabilityValue);
 			return value === undefined ? prevValue : value;
 		};
 
@@ -89,8 +92,11 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 	setCapabilities<CapabilityValues extends Record<string, HomeyValue>>(
 		handler: (value: SetValue) => CapabilityValues,
 	) {
+		const prevHandler = this.onSetHandler || (() => ({})) as OnSetHandler<SetValue>;
+		const newHandler = handler as OnSetHandler<SetValue>;
+
 		this.onSetHandler = (setValue) =>
-			({ ...(this.onSetHandler?.(setValue) || {}), ...handler(setValue) });
+			({ ...prevHandler(setValue), ...newHandler(setValue) });
 
 		return this;
 	}
@@ -99,9 +105,12 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 		capabilityId: string,
 		handler?: (value: SetValue) => CapabilityValue | undefined,
 	) {
+		const prevHandler = this.onSetHandler || (() => ({})) as OnSetHandler<SetValue>;
+		const newHandler = handler || ((value) => value as unknown as CapabilityValue);
+
 		this.onSetHandler = (setValue) => {
-			const values = this.onSetHandler?.(setValue) || {};
-			const value = handler?.(setValue) || setValue as unknown as CapabilityValue;
+			const values = prevHandler(setValue);
+			const value = newHandler(setValue);
 
 			if (value === undefined) delete values[capabilityId];
 			else values[capabilityId] = value;
