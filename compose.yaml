@@ -14,6 +14,7 @@ services:
       - "443:443"
     depends_on:
       - kraineff
+      - faithful
   
   # База данных
   postgres:
@@ -38,6 +39,15 @@ services:
       - database
     depends_on:
       - postgres
+  
+  # faithful.team
+  faithful:
+    build: ./services/faithful
+    container_name: faithful
+    restart: always
+    env_file: ./secrets/faithful.env
+    networks:
+      - app
 
 volumes:
   postgres:
