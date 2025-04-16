@@ -1,5 +1,9 @@
-app/node_modules/
-app/build.js
-app/.env
+**/node_modules/
+**/build.js
+
 secrets/
+**/.env
+**/.env.*
+!**/.env.example
+
 .DS_Store

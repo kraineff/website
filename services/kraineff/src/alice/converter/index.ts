@@ -151,7 +151,7 @@ export class Converter {
 		const capabilities = device.capabilitiesObj as HomeyCapabilities;
 
 		await Promise.all(
-			this.converters.values().map(async (converter) => {
+			[...this.converters.values()].map(async (converter) => {
 				const capability = await converter.onGetParameters(capabilities);
 				response.custom_data.push(converter.name);
 
@@ -188,7 +188,7 @@ export class Converter {
 			result.error_code = "DEVICE_UNREACHABLE";
 		else {
 			await Promise.all(
-				this.converters.values().map(async (converter) => {
+				[...this.converters.values()].map(async (converter) => {
 					const value = await converter.onGetCapability(device);
 					if (value === undefined) return;
 

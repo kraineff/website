@@ -1,5 +1,10 @@
 #!/bin/sh
 
+## Настройка для IPv6
+## sudo nano /etc/systemd/resolved.conf
+## DNS=2001:4860:4860::8888 2606:4700:4700::1111
+## sudo systemctl restart systemd-resolved
+
 ## Обновляем пакеты
 sudo apt-get update && sudo apt-get upgrade -y
 
