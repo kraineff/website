@@ -2,6 +2,7 @@
     "name": "app",
     "module": "src/index.js",
     "scripts": {
+        "dev": "NODE_ENV=development bun --watch --env-file=../../secrets/faithful.env src/index.ts",
         "build": "bun build ./src/index.ts --target bun --minify --outfile build.js"
     },
     "dependencies": {

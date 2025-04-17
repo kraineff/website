@@ -1,24 +1,20 @@
 FROM oven/bun:alpine AS base
-WORKDIR /usr/src/app
 
-# Установка зависимостей
-FROM base AS install
-RUN mkdir -p /temp/dev
-COPY package.json bun.lock /temp/dev/
-RUN cd /temp/dev && bun install --frozen-lockfile
+FROM base AS deps
+WORKDIR /app
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
 
-# Сборка и тестирование
-FROM base AS prerelease
-COPY --from=install /temp/dev/node_modules node_modules
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Сборка для продакшена
-ENV NODE_ENV=production
 RUN bun run build
 
-# Запуск
-FROM base AS release
-COPY --from=prerelease /usr/src/app/build.js .
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV production
+COPY --from=builder /app/build.js ./
 USER bun
 EXPOSE 3000/tcp
 CMD ["bun", "run", "build.js"]
