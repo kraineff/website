@@ -8,6 +8,7 @@ import type {
 	DeviceQueryResult,
 } from "../models";
 import type { HomeyCapabilities } from "../types/homey";
+import { YCapability, YDevice, YEvent, YInstance, YMode, YUnit } from "../types/yandex";
 
 type CapabilityBuilder<Params, GetValue, SetValue> = (
 	converter: CapabilityConverter<Params & { retrievable?: boolean }, GetValue, SetValue>,
@@ -15,16 +16,16 @@ type CapabilityBuilder<Params, GetValue, SetValue> = (
 
 export class Converter {
 	readonly name: string;
-	private type?: string;
+	private deviceType?: YDevice;
 	private converters = new Map<string, CapabilityConverter<any, any, any>>();
 
-	constructor(name: string, type?: string) {
+	constructor(name: string, deviceType?: YDevice) {
 		this.name = name;
-		this.type = type;
+		this.deviceType = deviceType;
 	}
 
-	static create(name: string, type?: string) {
-		return new Converter(name, type);
+	static create(name: string, deviceType?: YDevice) {
+		return new Converter(name, deviceType);
 	}
 
 	use(converter: Converter) {
@@ -42,14 +43,14 @@ export class Converter {
 			converters.set(key, converter);
 		});
 
-		this.type = converter.type || this.type;
+		this.deviceType = converter.deviceType || this.deviceType;
 		this.converters = converters;
 		return this;
 	}
 
 	private createConverter<Params extends Record<string, any>, GetValue, SetValue>(
-		type: string,
-		instance: string,
+		type: YCapability,
+		instance: YInstance,
 		run: CapabilityBuilder<Params, GetValue, SetValue>,
 	) {
 		this.converters.set(
@@ -60,16 +61,16 @@ export class Converter {
 	}
 
 	createState(run: CapabilityBuilder<{ split?: boolean }, boolean, boolean>) {
-		return this.createConverter("devices.capabilities.on_off", "on", run);
+		return this.createConverter(YCapability.on_off, YInstance.on, run);
 	}
 
 	createColor<
-		Instance extends string,
-		Value = Instance extends "hsv" ? {
+		Instance extends YInstance,
+		Value = Instance extends YInstance.hsv ? {
 			h: number;
 			s: number;
 			v: number;
-		} : Instance extends "scene" ? string : number
+		} : Instance extends YInstance.scene ? string : number
 	>(
 		instance: Instance,
 		run: CapabilityBuilder<
@@ -84,22 +85,22 @@ export class Converter {
 			Value
 		>,
 	) {
-		return this.createConverter("devices.capabilities.color_setting", instance, run);
+		return this.createConverter(YCapability.color_setting, instance, run);
 	}
 
 	createVideo(run: CapabilityBuilder<{ protocols: string[] }, { protocols: string[] }, null>) {
-		return this.createConverter("devices.capabilities.video_stream", "get_stream", run);
+		return this.createConverter(YCapability.video_stream, YInstance.get_stream, run);
 	}
 
-	createMode(instance: string, run: CapabilityBuilder<{ modes: string[] }, string, string>) {
-		return this.createConverter("devices.capabilities.mode", instance, run);
+	createMode(instance: YInstance, run: CapabilityBuilder<{ modes: YMode[] }, string, string>) {
+		return this.createConverter(YCapability.mode, instance, run);
 	}
 
 	createRange(
-		instance: string,
+		instance: YInstance,
 		run: CapabilityBuilder<
 			{
-				unit?: string;
+				unit?: YUnit;
 				random_access?: boolean;
 				range?: {
 					min: number;
@@ -111,19 +112,19 @@ export class Converter {
 			number
 		>,
 	) {
-		return this.createConverter("devices.capabilities.range", instance, run);
+		return this.createConverter(YCapability.range, instance, run);
 	}
 
-	createToggle(instance: string, run: CapabilityBuilder<Record<string, unknown>, boolean, boolean>) {
-		return this.createConverter("devices.capabilities.toggle", instance, run);
+	createToggle(instance: YInstance, run: CapabilityBuilder<Record<string, unknown>, boolean, boolean>) {
+		return this.createConverter(YCapability.toggle, instance, run);
 	}
 
-	createFloat(instance: string, run: CapabilityBuilder<{ unit?: string }, number, null>) {
-		return this.createConverter("devices.properties.float", instance, run);
+	createFloat(instance: YInstance, run: CapabilityBuilder<{ unit?: YUnit }, number, null>) {
+		return this.createConverter(YCapability.float, instance, run);
 	}
 
-	createEvent(instance: string, run: CapabilityBuilder<{ events: string[] }, string, null>) {
-		return this.createConverter("devices.properties.event", instance, run);
+	createEvent(instance: YInstance, run: CapabilityBuilder<{ events: YEvent[] }, string, null>) {
+		return this.createConverter(YCapability.event, instance, run);
 	}
 
 	async getDevice(
@@ -134,7 +135,7 @@ export class Converter {
 			id: device.id,
 			name: device.name,
 			room: zones[device.zone].name,
-			type: this.type || getDeviceType(device),
+			type: this.deviceType ? `devices.types.${this.deviceType}`: getDeviceType(device),
 			custom_data: [],
 			capabilities: [],
 			properties: [],
@@ -155,7 +156,7 @@ export class Converter {
 				const capability = await converter.onGetParameters(capabilities);
 				response.custom_data.push(converter.name);
 
-				if (capability.type === "devices.capabilities.color_setting") {
+				if (capability.type === YCapability.color_setting) {
 					if (!capabilityColor) capabilityColor = capability;
 					else
 						capabilityColor.parameters = {

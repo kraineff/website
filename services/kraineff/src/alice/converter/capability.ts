@@ -1,6 +1,7 @@
 import type { HomeyAPIV2 } from "homey-api";
 import type { HomeyCapabilities, HomeyValue } from "../types/homey";
 import type { CapabilityState } from "../models";
+import { YCapability, YInstance } from "../types/yandex";
 
 type Category = "capabilities" | "properties";
 type OnGetParamsHandler<Params> = (capabilities: HomeyCapabilities) => Partial<Params>;
@@ -10,8 +11,8 @@ export type OnSetValueHandler = (capabilityId: string, value: HomeyValue) => Pro
 
 export class CapabilityConverter<Params extends Record<string, unknown>, GetValue, SetValue> {
 	readonly name: string;
-	readonly type: string;
-	readonly instance: string;
+	readonly type: YCapability;
+	readonly instance: YInstance;
 	readonly category: Category;
 	private parameters: Params;
 
@@ -19,11 +20,11 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 	private onGetHandler?: OnGetHandler<GetValue>;
 	private onSetHandler?: OnSetHandler<SetValue>;
 
-	constructor(name: string, type: string, instance: string) {
+	constructor(name: string, type: YCapability, instance: YInstance) {
 		this.name = name;
 		this.type = type;
 		this.instance = instance;
-		this.category = type.split(".")[1] as Category;
+		this.category = (type === YCapability.float || type === YCapability.event) ? "properties" : "capabilities";
 		this.parameters = {} as Params;
 	}
 
@@ -127,7 +128,7 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 		};
 
 		const response = {
-			type: this.type,
+			type: `devices.${this.category}.${this.type}`,
 			retrievable: parameters.retrievable ?? true,
 			reportable: false,
 			parameters: {} as Record<string, unknown>,
@@ -151,7 +152,7 @@ export class CapabilityConverter<Params extends Record<string, unknown>, GetValu
 				});
 				break;
 			default:
-				const skip = ["devices.capabilities.on_off", "devices.capabilities.color_setting"];
+				const skip = [YCapability.on_off, YCapability.color_setting];
 				if (!skip.includes(this.type)) response.parameters.instance = this.instance;
 		}
 

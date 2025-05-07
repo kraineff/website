@@ -1,14 +1,14 @@
-import { YandexDevice } from "../types/yandex";
 import { Converter } from "../converter";
+import { YDevice, YEvent, YInstance, YMode, YUnit } from "../types/yandex";
 
 export const DeviceConverters = {
     "codes.lucasvdh.android-tv:remote": () => Converter
         .create("codes.lucasvdh.android-tv:remote")
-        .createRange("channel", run => run
+        .createRange(YInstance.channel, run => run
             .setParameters({ retrievable: false, random_access: false, range: { min: 0, max: 1, precision: 1 } })
             .setCapabilities<Record<string, boolean>>(value => ({ ["key_channel_" + ["down", "up"][value]]: true }))
         )
-        .createToggle("pause", run => run
+        .createToggle(YInstance.pause, run => run
             .setParameters({ retrievable: false })
             .setCapabilities<Record<string, boolean>>(value => ({ ["key_" + ["play", "pause"][+value]]: true }))
         ),
@@ -25,9 +25,9 @@ export const DeviceConverters = {
     
     "com.fibaro:FGR-223": () => Converter
         .create("com.fibaro:FGR-223")
-        .createRange("open", run => run
+        .createRange(YInstance.open, run => run
             .setParameters({
-                unit: "percent",
+                unit: YUnit.percent,
                 range: { min: 0, max: 100, precision: 1 }
             })
             .getCapability<number>("windowcoverings_set", value => value * 100)
@@ -42,33 +42,33 @@ export const DeviceConverters = {
             .getCapability<string>("vacuum_state", value => ["clean", "quick", "spot", "train", "manual", "paused", "stopped"].includes(value))
             .setCapabilities<Record<string, boolean>>(value => ({ ["command_" + ["dock", "start_clean"][+value]]: true }))
         )
-        .createToggle("pause", run => run
+        .createToggle(YInstance.pause, run => run
             .getCapability<string>("vacuum_state", value => ["paused", "stopped"].includes(value))
             .setCapabilities<Record<string, boolean>>(value => ({ ["command_" + ["resume", "pause"][+value]]: true }))
         )
-        .createFloat("meter", run => run
+        .createFloat(YInstance.meter, run => run
             .getCapability<number>("measure_mission_minutes")
         )
-        .createEvent("open", run => run
-            .setParameters({ events: ["opened", "closed"] })
+        .createEvent(YInstance.open, run => run
+            .setParameters({ events: [YEvent.closed, YEvent.opened] })
             .getCapability<boolean>("alarm_bin_removed", value => ["closed", "opened"][+value])
         ),
     
     "com.nokia.health:user": () => Converter
-        .create("com.nokia.health:user", YandexDevice.Meter)
-        .createFloat("temperature", run => run
-            .setParameters({ unit: "temperature.celsius" })
+        .create("com.nokia.health:user", YDevice.smart_meter)
+        .createFloat(YInstance.temperature, run => run
+            .setParameters({ unit: YUnit.temperature_celsius })
             .getCapability<number>("nh_measure_body_temperature")
         )
-        .createFloat("pressure", run => run
-            .setParameters({ unit: "pressure.mmhg" })
+        .createFloat(YInstance.pressure, run => run
+            .setParameters({ unit: YUnit.pressure_mmhg })
             .getCapability<number>("nh_measure_systolic_blood_pressure")
         )
-        .createFloat("food_level", run => run
-            .setParameters({ unit: "percent" })
+        .createFloat(YInstance.food_level, run => run
+            .setParameters({ unit: YUnit.percent })
             .getCapability<number>("nh_measure_fat_ratio")
         )
-        .createFloat("meter", run => run
+        .createFloat(YInstance.meter, run => run
             .getCapability<number>("nh_measure_weight")
         ),
     
@@ -78,13 +78,13 @@ export const DeviceConverters = {
             .getCapability<boolean>("se_onoff")
             .setCapability<boolean>("se_onoff")
         )
-        .createMode("thermostat", run => run
-            .setParameters({ modes: ["auto", "heat", "cool"] })
+        .createMode(YInstance.thermostat, run => run
+            .setParameters({ modes: [YMode.auto, YMode.heat, YMode.cool] })
             .getCapability<string>("thermostat_mode", value => ["auto", "heat", "cool"].includes(value) ? value : undefined)
             .setCapability<string>("thermostat_mode")
         )
-        .createMode("fan_speed", run => run
-            .setParameters({ modes: ["quiet", "auto", "low", "medium", "high"] })
+        .createMode(YInstance.fan_speed, run => run
+            .setParameters({ modes: [YMode.quiet, YMode.auto, YMode.low, YMode.medium, YMode.high] })
             .getCapability<string>("se_fanlevel", value => ["quiet", "auto", "low", "medium", "high"].includes(value) ? value : undefined)
             .setCapability<string>("se_fanlevel")
         ),
@@ -95,25 +95,25 @@ export const DeviceConverters = {
             .getCapability<string>("thermostat_mode_AqaraTRV", value => ({ "off": false, "manual": true })[value])
             .setCapability<string>("thermostat_mode_AqaraTRV", value => ["off", "manual"][+value])
         )
-        .createMode("thermostat", run => run
-            .setParameters({ modes: ["auto"] })
+        .createMode(YInstance.thermostat, run => run
+            .setParameters({ modes: [YMode.auto] })
             .getCapability<string>("thermostat_mode_AqaraTRV", value => value === "away" ? "auto" : undefined)
             .setCapability<string>("thermostat_mode_AqaraTRV", value => value === "auto" ? "away" : undefined)
         )
-        .createEvent("open", run => run
-            .setParameters({ events: ["closed", "opened"] })
+        .createEvent(YInstance.open, run => run
+            .setParameters({ events: [YEvent.closed, YEvent.opened] })
             .getCapability<boolean>("alarm_window", value => ["closed", "opened"][+value])
         ),
     
     "net.schmidt-cisternas.pcc-alt:aircon": () => Converter
         .create("net.schmidt-cisternas.pcc-alt:aircon")
-        .createMode("fan_speed", run => run
-            .setParameters({ modes: ["auto", "low", "medium", "high"] })
+        .createMode(YInstance.fan_speed, run => run
+            .setParameters({ modes: [YMode.auto, YMode.low, YMode.medium, YMode.high] })
             .getCapability<string>("fan_speed", value => (({ Auto: "auto", Low: "low", Mid: "medium", High: "high" })[value]))
             .setCapability<string>("fan_speed", value => ({ auto: "Auto", low: "Low", medium: "Mid", high: "High" }[value]))
         )
-        .createMode("program", run => run
-            .setParameters({ modes: ["auto", "dry", "cool", "heat", "fan_only"] })
+        .createMode(YInstance.program, run => run
+            .setParameters({ modes: [YMode.auto, YMode.dry, YMode.cool, YMode.heat, YMode.fan_only] })
             .getCapability<string>("operation_mode", value => (({ Auto: "auto", Dry: "dry", Cool: "cool", Heat: "heat", Fan: "fan_only" })[value]))
             .setCapability<string>("operation_mode", value => ({ auto: "Auto", dry: "Dry", cool: "Cool", heat: "Heat", fan_only: "Fan" }[value]))
         )
