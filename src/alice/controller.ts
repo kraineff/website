@@ -1,6 +1,6 @@
+import PocketBase from "pocketbase";
 import { AthomCloudAPI } from "homey-api";
 import { Converters } from "./converters";
-import { sql } from "bun";
 import type {
 	Device,
 	DeviceAction,
@@ -19,6 +19,7 @@ export class AliceController {
 	constructor(
 		private clientId: string,
 		private clientSecret: string,
+		private pocketbase: PocketBase
 	) {
 		this.homeyConverters = new Converters();
 		setInterval(() => this.homeyApis.clear(), this.CACHE_CLEANUP_INTERVAL);
@@ -28,27 +29,31 @@ export class AliceController {
 		const storageAdapter = new AthomCloudAPI.StorageAdapter();
 
 		storageAdapter.get = async () => {
-			const [user] = await sql`SELECT * FROM homey_user WHERE token = ${token} LIMIT ${1}`;
-			return (user && JSON.parse(user.storage)) || {};
+			return await this.pocketbase.collection("homey")
+				.getFirstListItem(`token = "${token}"`)
+				.then(item => JSON.parse(item.storage))
+				.catch(() => {});
 		};
 
 		storageAdapter.set = async (storage: AthomStorage) => {
 			if (!storage.user) return;
 			const homeyId = storage.user.homeys[0].id;
-			const [user] = await sql`SELECT * FROM homey_user WHERE id = ${homeyId} LIMIT ${1}`;
-
-			if (user)
-				await sql`
-                UPDATE homey_user
-                SET token = ${token},
-                    storage = ${JSON.stringify({ ...JSON.parse(user.storage), ...storage })}
-                WHERE id = ${homeyId}
-            `;
-			else
-				await sql`
-                INSERT INTO homey_user (id, token, storage)
-                VALUES (${homeyId}, ${token}, ${JSON.stringify(storage)})
-            `;
+			
+			await this.pocketbase.collection("homey")
+				.getOne(homeyId)
+				.then(async item => {
+					await this.pocketbase.collection("homey").update(homeyId, {
+						token,
+						storage: JSON.stringify({ ...JSON.parse(item.storage), ...storage }),
+					}).catch(console.error);
+				})
+				.catch(async () => {
+					await this.pocketbase.collection("homey").create({
+						id: homeyId,
+						token,
+						storage: JSON.stringify(storage),
+					});
+				});
 		};
 
 		return storageAdapter;
@@ -84,12 +89,12 @@ export class AliceController {
 
 	async userRemove(token: string) {
 		await this.getAthomUser(token);
-		const [user] = await sql`SELECT * FROM homey_user WHERE token = ${token} LIMIT ${1}`;
-
-		if (user) {
-			this.homeyApis.delete(token);
-			await sql`DELETE FROM homey_user WHERE id = ${user.id}`;
-		}
+		await this.pocketbase.collection("homey")
+				.getFirstListItem(`token = "${token}"`)
+				.then(async item => {
+					this.homeyApis.delete(token);
+					await this.pocketbase.collection("homey").delete(item.id);
+				});
 	}
 
 	async getDevices(token: string): Promise<UserDevicesResponse["payload"]> {

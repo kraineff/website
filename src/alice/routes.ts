@@ -1,9 +1,10 @@
+import PocketBase from "pocketbase";
 import { Elysia } from "elysia";
 import { AliceController } from "./controller";
 import { AliceModels } from "./models";
 
-export const AliceRoutes = async (clientId: string, clientSecret: string) => {
-	const service = new AliceController(clientId, clientSecret);
+export const AliceRoutes = async (clientId: string, clientSecret: string, pocketbase: PocketBase) => {
+	const service = new AliceController(clientId, clientSecret, pocketbase);
 
 	return new Elysia({ prefix: "/alice/v1.0" })
 		.use(AliceModels)

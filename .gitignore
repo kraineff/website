@@ -1,2 +1,5 @@
-secrets/
+node_modules/
+build.js
+.env
+.env.*
 .DS_Store
