@@ -8,9 +8,7 @@ export const AliceRoutes = async (clientId: string, clientSecret: string, pocket
 
 	return new Elysia({ prefix: "/alice/v1.0" })
 		.use(AliceModels)
-		.onError(({ error }) => {
-			console.error("[Global]", error);	
-		})
+		.onError(({ error }) => console.error(error))
 		.head("/", () => new Response(null, { status: 200 }))
 		.group("/user", { headers: "user.headers" }, app => app
 			.resolve(({ headers }) => ({

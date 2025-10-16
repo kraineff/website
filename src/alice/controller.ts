@@ -32,7 +32,7 @@ export class AliceController {
 			return await this.pocketbase.collection("homey")
 				.getFirstListItem(`token = "${token}"`)
 				.then(item => JSON.parse(item.storage))
-				.catch(() => {});
+				.catch(() => ({}));
 		};
 
 		storageAdapter.set = async (storage: AthomStorage) => {
