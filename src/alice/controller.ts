@@ -42,11 +42,11 @@ export class AliceController {
 			const item = await this.pocketbase.collection("homey").getOne(homeyId).catch(() => undefined);
 			if (item) {
 				await this.pocketbase.collection("homey").update(homeyId, {
-					token, storage: { ...(item.storage || {}), ...storage }
+					token, storage: JSON.stringify({ ...item.storage, ...storage })
 				});
 			} else {
 				await this.pocketbase.collection("homey").create({
-					id: homeyId, token, storage
+					id: homeyId, token, storage: JSON.stringify(storage)
 				});
 			}
 		};
