@@ -31,7 +31,7 @@ export class AliceController {
 		storageAdapter.get = async () => {
 			return await this.pocketbase.collection("homey")
 				.getFirstListItem(`token = "${token}"`)
-				.then(item => JSON.parse(item.storage || "{}"))
+				.then(item => item.storage || {})
 				.catch(() => ({}));
 		};
 
@@ -42,14 +42,11 @@ export class AliceController {
 			const item = await this.pocketbase.collection("homey").getOne(homeyId).catch(() => undefined);
 			if (item) {
 				await this.pocketbase.collection("homey").update(homeyId, {
-					token,
-					storage: JSON.stringify({ ...JSON.parse(item.storage || "{}"), ...storage }),
+					token, storage: { ...(item.storage || {}), ...storage }
 				});
 			} else {
 				await this.pocketbase.collection("homey").create({
-					id: homeyId,
-					token,
-					storage: JSON.stringify(storage),
+					id: homeyId, token, storage
 				});
 			}
 		};
@@ -88,11 +85,11 @@ export class AliceController {
 	async userRemove(token: string) {
 		await this.getAthomUser(token);
 		await this.pocketbase.collection("homey")
-				.getFirstListItem(`token = "${token}"`)
-				.then(async item => {
-					this.homeyApis.delete(token);
-					await this.pocketbase.collection("homey").delete(item.id);
-				});
+			.getFirstListItem(`token = "${token}"`)
+			.then(async item => {
+				this.homeyApis.delete(token);
+				await this.pocketbase.collection("homey").delete(item.id);
+			});
 	}
 
 	async getDevices(token: string): Promise<UserDevicesResponse["payload"]> {
