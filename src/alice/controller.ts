@@ -31,29 +31,27 @@ export class AliceController {
 		storageAdapter.get = async () => {
 			return await this.pocketbase.collection("homey")
 				.getFirstListItem(`token = "${token}"`)
-				.then(item => JSON.parse(item.storage))
+				.then(item => JSON.parse(item.storage || "{}"))
 				.catch(() => ({}));
 		};
 
 		storageAdapter.set = async (storage: AthomStorage) => {
-			if (!storage || !storage.user) return;
-			const homeyId = storage.user.homeys[0].id;
+			const homeyId = storage?.user?.homeys?.[0]?.id;
+			if (homeyId == undefined) return;
 			
-			await this.pocketbase.collection("homey")
-				.getOne(homeyId)
-				.then(async item => {
-					await this.pocketbase.collection("homey").update(homeyId, {
-						token,
-						storage: JSON.stringify({ ...JSON.parse(item.storage), ...storage }),
-					}).catch(console.error);
-				})
-				.catch(async () => {
-					await this.pocketbase.collection("homey").create({
-						id: homeyId,
-						token,
-						storage: JSON.stringify(storage),
-					});
+			const item = await this.pocketbase.collection("homey").getOne(homeyId).catch(() => undefined);
+			if (item) {
+				await this.pocketbase.collection("homey").update(homeyId, {
+					token,
+					storage: JSON.stringify({ ...JSON.parse(item.storage || "{}"), ...storage }),
 				});
+			} else {
+				await this.pocketbase.collection("homey").create({
+					id: homeyId,
+					token,
+					storage: JSON.stringify(storage),
+				});
+			}
 		};
 
 		return storageAdapter;
