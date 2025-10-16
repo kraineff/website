@@ -36,7 +36,7 @@ export class AliceController {
 		};
 
 		storageAdapter.set = async (storage: AthomStorage) => {
-			if (!storage.user) return;
+			if (!storage || !storage.user) return;
 			const homeyId = storage.user.homeys[0].id;
 			
 			await this.pocketbase.collection("homey")
